@@ -1,0 +1,76 @@
+# ResumeRAG Configuration
+
+# MongoDB Configuration
+mongodb:
+  host: ${MONGODB_HOST:localhost}
+  port: ${MONGODB_PORT:27017}
+  database: ${MONGODB_DATABASE:resumerag}
+  username: ${MONGODB_USERNAME:}
+  password: ${MONGODB_PASSWORD:}
+  collection: resumes
+
+# Milvus Configuration
+milvus:
+  host: ${MILVUS_HOST:localhost}
+  port: ${MILVUS_PORT:19530}
+  collection: resume_embeddings
+  dimension: 1024  # BGE-M3 dimension
+  index_type: HNSW
+  metric_type: COSINE
+  hnsw_m: 16
+  hnsw_ef_construction: 200
+  hnsw_ef_search: 128
+
+# Elasticsearch Configuration
+elasticsearch:
+  hosts: ${ES_HOSTS:http://localhost:9200}
+  index: resumes
+  username: ${ES_USERNAME:}
+  password: ${ES_PASSWORD:}
+  analyzer: ik_max_word
+  search_analyzer: ik_smart
+
+# LLM Configuration
+llm:
+  provider: ${LLM_PROVIDER:openai}  # openai / azure / local
+  model: ${LLM_MODEL:gpt-4}
+  api_key: ${OPENAI_API_KEY:}
+  api_base: ${OPENAI_API_BASE:https://api.openai.com/v1}
+  temperature: 0.3
+  max_tokens: 2000
+  streaming: true
+
+# Embedding Configuration
+embedding:
+  model_name: ${EMBEDDING_MODEL:BAAI/bge-m3}
+  device: ${EMBEDDING_DEVICE:cpu}  # cpu / cuda
+  batch_size: 32
+
+# Reranker Configuration
+reranker:
+  enabled: true
+  model_name: ${RERANKER_MODEL:BAAI/bge-reranker-v2-m3}
+  device: ${RERANKER_DEVICE:cpu}
+  top_k: 10
+
+# Retrieval Configuration
+retrieval:
+  milvus_top_n: 100
+  es_top_n: 100
+  rrf_k: 60
+  hyde_weight: 0.7
+  final_top_k: 10
+
+# Parsing Configuration
+parsing:
+  ocr_enabled: true
+  ocr_engine: paddleocr  # paddleocr / tesseract
+  confidence_threshold: 0.8
+  max_text_length: 50000
+
+# Application Configuration
+app:
+  host: ${APP_HOST:0.0.0.0}
+  port: ${APP_PORT:8501}
+  debug: ${APP_DEBUG:false}
+  log_level: ${LOG_LEVEL:INFO}
