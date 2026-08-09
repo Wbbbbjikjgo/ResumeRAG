@@ -44,8 +44,8 @@ class Explainer:
             if resume.education:
                 degree = resume.education[0].degree
             
-            # Generate explanation using LLM
-            llm = LLMFactory.get_llm()
+            # Generate explanation using LLM（非流式，避免 DeepSeek 流式+JSON 阻塞）
+            llm = LLMFactory.get_llm(streaming=False)
             
             response = await llm.ainvoke([
                 ("system", """你是一个专业的招聘顾问。请根据岗位需求和候选人简历，生成匹配度分析。
