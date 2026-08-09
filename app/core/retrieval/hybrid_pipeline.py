@@ -12,6 +12,7 @@ from app.core.retrieval.milvus_retriever import MilvusRetriever
 from app.core.retrieval.es_retriever import ESRetriever
 from app.core.retrieval.fusion import ResultFusion
 from app.core.retrieval.reranker import Reranker
+from app.core.infra.llm_factory import LLMFactory
 
 
 class HybridRetrievalPipeline:
@@ -90,21 +91,49 @@ class HybridRetrievalPipeline:
         
         # Step 5: Reranking (if enabled and we have results)
         if use_rerank and fused_results and settings.reranker.enabled:
-            # TODO: Fetch documents from MongoDB for reranking
-            # For now, skip reranking until we have document storage
-            logger.info("Reranking skipped (document storage not yet implemented)")
-            # fused_results = await Reranker.rerank(
-            #     query=hyde_doc or jd_text,
-            #     results=fused_results,
-            #     documents=documents,
-            #     top_k=top_k
-            # )
+            documents = await cls._fetch_documents([r.resume_id for r in fused_results])
+            if documents:
+                if LLMFactory.get_reranker() is not None:
+                    fused_results = await Reranker.rerank(
+                        query=hyde_doc or jd_text,
+                        results=fused_results,
+                        documents=documents,
+                        top_k=top_k
+                    )
+                else:
+                    # Cross-Encoder 不可用时降级为 LLM 精排
+                    fused_results = await Reranker.llm_rerank(
+                        query=jd_text,
+                        results=fused_results,
+                        documents=documents,
+                        top_k=top_k
+                    )
         
         # Final truncation
         final_results = fused_results[:top_k]
         
         logger.info(f"Final results: {len(final_results)}")
         return jd_query, final_results
+
+    @staticmethod
+    async def _fetch_documents(resume_ids: list[str]) -> dict[str, str]:
+        """Fetch resume texts from MongoDB for reranking."""
+        try:
+            from app.core.infra.mongo_client import MongoDBClient
+            collection = MongoDBClient.get_collection()
+            cursor = collection.find(
+                {"resume_id": {"$in": resume_ids}},
+                {"resume_id": 1, "full_text": 1, "summary": 1}
+            )
+            documents = {}
+            async for doc in cursor:
+                text = doc.get("summary") or doc.get("full_text", "")
+                if text:
+                    documents[doc["resume_id"]] = text[:1500]
+            return documents
+        except Exception as e:
+            logger.error(f"Fetch documents failed: {e}")
+            return {}
 
     @classmethod
     async def _milvus_search(

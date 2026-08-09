@@ -11,6 +11,7 @@ from app.core.parsing.loader import DocumentLoader
 from app.core.parsing.ocr import OCREngine
 from app.core.parsing.splitter import ResumeSplitter
 from app.core.parsing.extractor import ResumeExtractor
+from app.core.storage.ingest_service import IngestService
 
 
 class ParsingPipeline:
@@ -128,7 +129,25 @@ class ParsingPipeline:
         try:
             doc, sections = await cls.parse_resume(file_content, filename, content_type)
             
-            # TODO: Store in MongoDB, Milvus, Elasticsearch
+            # 入库：MongoDB / Milvus / Elasticsearch
+            store_status = await IngestService.store(doc, sections)
+            
+            failed_stores = [k for k, ok in store_status.items() if not ok]
+            if failed_stores:
+                return IngestResult(
+                    resume_id=doc.resume_id,
+                    filename=filename,
+                    status="partial",
+                    message=f"解析成功，但入库失败: {', '.join(failed_stores)}",
+                    parsed_fields={
+                        "name": doc.name,
+                        "phone": doc.phone,
+                        "email": doc.email,
+                        "skills_count": len(doc.skills),
+                        "years_of_experience": doc.years_of_experience,
+                        "sections_count": len(sections)
+                    }
+                )
             
             return IngestResult(
                 resume_id=doc.resume_id,
