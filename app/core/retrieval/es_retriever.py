@@ -40,7 +40,7 @@ class ESRetriever:
             # Perform search
             response = await client.search(
                 index=settings.elasticsearch.index,
-                body=query_body,
+                query=query_body["query"],
                 size=top_n
             )
             
@@ -186,7 +186,8 @@ class ESRetriever:
             
             response = await client.search(
                 index=settings.elasticsearch.index,
-                body=query_body
+                query=query_body["query"],
+                size=top_n
             )
             
             retrieval_results = []

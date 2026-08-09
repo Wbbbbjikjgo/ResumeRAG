@@ -74,8 +74,8 @@ class ElasticsearchClient:
             }
         }
 
-        await client.indices.create(index=idx_name, body=mappings)
-        logger.info(f"Index {idx_name} created with ik analyzer")
+        await client.indices.create(index=idx_name, mappings=mappings["mappings"])
+        logger.info(f"Index {idx_name} created with analyzer: {settings.elasticsearch.analyzer}")
 
     @classmethod
     async def close(cls):

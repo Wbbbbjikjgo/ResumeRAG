@@ -14,7 +14,7 @@ milvus:
   host: ${MILVUS_HOST:localhost}
   port: ${MILVUS_PORT:19530}
   collection: resume_embeddings
-  dimension: 1024  # BGE-M3 dimension
+  dimension: ${MILVUS_DIMENSION:1024}  # BGE-M3 = 1024；需与 EMBEDDING_MODEL 维度一致
   index_type: HNSW
   metric_type: COSINE
   hnsw_m: 16
