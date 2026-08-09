@@ -4,8 +4,8 @@ import asyncio
 from typing import AsyncIterator, Any
 
 from langchain.agents import AgentExecutor, create_react_agent
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
+from langchain_core.prompts import PromptTemplate
+from langchain_core.messages import HumanMessage, AIMessage
 from langchain.memory import ConversationBufferWindowMemory
 from loguru import logger
 
@@ -25,43 +25,50 @@ class ChatAgent:
         if cls._agent_executor is None:
             llm = LLMFactory.get_llm()
             
-            # Create memory
+            # Create memory（文本格式，与 ReAct 字符串模板配合）
             cls._memory = ConversationBufferWindowMemory(
                 memory_key="chat_history",
-                return_messages=True,
+                return_messages=False,
                 k=10  # Keep last 10 turns
             )
             
-            # Create prompt
-            prompt = ChatPromptTemplate.from_messages([
-                ("system", """你是 ResumeRAG 智能招聘助手。你可以帮助 HR 进行以下操作：
-
-1. **语义检索**：使用 semantic_search 工具根据自然语言查询简历
-2. **关键词检索**：使用 keyword_search 工具根据关键词检索简历
-3. **条件筛选**：使用 filter_search 工具按技能/年限/学历筛选
-4. **对比候选人**：使用 compare_candidates 工具对比多个候选人
-
-回答要求：
-- 使用中文回答
-- 回答要简洁、准确
-- 如果需要检索，主动调用工具
-- 如果信息不足，明确说明
+            # Create prompt（经典 ReAct 模板，必须包含格式指令）
+            prompt = PromptTemplate.from_template("""你是 ResumeRAG 智能招聘助手，帮助 HR 检索与筛选简历候选人。
 
 可用工具：
 {tools}
 
-工具名称：{tool_names}
+工具名称列表：{tool_names}
 
-历史对话：{chat_history}"""),
-                MessagesPlaceholder(variable_name="input"),
-                MessagesPlaceholder(variable_name="agent_scratchpad"),
-            ])
+回答要求：
+- 使用中文回答，简洁准确
+- 需要检索时主动调用工具
+- 信息不足时明确说明
+
+请严格使用以下格式：
+
+Question: 需要回答的输入问题
+Thought: 你应该始终思考该做什么
+Action: 要执行的动作，必须是 [{tool_names}] 之一
+Action Input: 动作的输入内容
+Observation: 动作返回的结果
+...（Thought/Action/Action Input/Observation 可以重复多次）
+Thought: 我现在知道最终答案了
+Final Answer: 对原始问题的最终回答
+
+历史对话：
+{chat_history}
+
+开始！
+
+Question: {input}
+Thought:{agent_scratchpad}""")
             
             # Create agent
             agent = create_react_agent(
                 llm=llm,
                 tools=TOOL_REGISTRY,
-                prompt=prompt
+                prompt=prompt,
             )
             
             # Create executor
