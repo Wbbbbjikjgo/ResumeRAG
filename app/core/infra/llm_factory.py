@@ -11,14 +11,34 @@ class LLMFactory:
     """Factory for creating LLM, Embedding, and Reranker instances."""
 
     _llm_instance: ChatOpenAI | None = None
+    _llm_nostream_instance: ChatOpenAI | None = None
     _embedding_instance: HuggingFaceEmbeddings | None = None
     _reranker_instance: object | None = None
 
     @classmethod
-    def get_llm(cls) -> ChatOpenAI:
-        """Get LLM instance."""
+    def get_llm(cls, streaming: bool | None = None) -> ChatOpenAI:
+        """Get LLM instance.
+
+        Args:
+            streaming: None 使用配置默认值；显式传 False 返回非流式实例
+                       （DeepSeek 流式 + JSON 结构化输出会阻塞，解析类调用应使用非流式）
+        """
+        settings = get_settings()
+        use_streaming = settings.llm.streaming if streaming is None else streaming
+        if not use_streaming:
+            if cls._llm_nostream_instance is None:
+                cls._llm_nostream_instance = ChatOpenAI(
+                    model=settings.llm.model,
+                    api_key=settings.llm.api_key,
+                    base_url=settings.llm.api_base,
+                    temperature=settings.llm.temperature,
+                    max_tokens=settings.llm.max_tokens,
+                    streaming=False
+                )
+                logger.info(f"LLM (non-streaming) initialized: {settings.llm.model}")
+            return cls._llm_nostream_instance
+
         if cls._llm_instance is None:
-            settings = get_settings()
             cls._llm_instance = ChatOpenAI(
                 model=settings.llm.model,
                 api_key=settings.llm.api_key,
