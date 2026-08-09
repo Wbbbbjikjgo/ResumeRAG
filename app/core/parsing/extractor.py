@@ -1,5 +1,6 @@
 """LLM-based structured extraction for resume parsing."""
 
+import json
 import re
 from typing import Any
 
@@ -46,30 +47,54 @@ class ResumeExtractor:
             return cls._fallback_extract(resume_text)
         
         try:
-            # Use LLM with structured output
+            # Use LLM with JSON output (DeepSeek 不支持 json_schema 结构化输出)
             llm = LLMFactory.get_llm()
-            structured_llm = llm.with_structured_output(Resume)
-            
-            result = await structured_llm.ainvoke([
+
+            result = await llm.ainvoke([
                 ("system", """你是一个专业的简历解析助手。请从以下简历文本中提取结构化信息。
 
 要求：
-1. 严格按照提供的 Schema 输出
-2. 如果某个字段在文本中找不到，使用 null 或空列表
-3. 教育经历按时间倒序排列
-4. 工作经历按时间倒序排列
-5. 技能列表去重并规范化
-6. 工作年限根据工作经历估算
-7. 生成一段 100 字以内的简历摘要"""),
+1. 如果某个字段在文本中找不到，使用 null 或空列表
+2. 教育经历按时间倒序排列，degree 只能是：大专/本科/硕士/博士/其他
+3. 工作经历按时间倒序排列
+4. 技能列表去重并规范化
+5. years_of_experience 根据工作经历估算（数字），无法估算则为 null
+6. summary 生成一段 100 字以内的简历摘要
+
+输出格式：严格 JSON 对象，结构如下，不要包含其他文字或 markdown 标记：
+{"name": str|null, "phone": str|null, "email": str|null,
+ "education": [{"school": str, "major": str, "degree": str, "start": str, "end": str}],
+ "experience": [{"company": str, "title": str, "start": str, "end": str, "description": str}],
+ "skills": [str], "years_of_experience": number|null, "summary": str}"""),
                 ("human", f"请解析以下简历：\n\n{resume_text[:10000]}")  # Limit to 10k chars
-            ])
-            
-            logger.info(f"LLM extraction successful: {result.name}")
-            return result
-            
+            ], response_format={"type": "json_object"})
+
+            response_text = result.content if hasattr(result, "content") else str(result)
+            parsed = cls._extract_json(response_text)
+            # 宽容处理嵌套字段缺失
+            parsed.setdefault("education", [])
+            parsed.setdefault("experience", [])
+            resume = Resume(**parsed)
+
+            logger.info(f"LLM extraction successful: {resume.name}")
+            return resume
+
         except Exception as e:
             logger.error(f"LLM extraction failed: {e}, falling back to regex")
             return cls._fallback_extract(resume_text)
+
+    @staticmethod
+    def _extract_json(text: str) -> dict:
+        """Extract a JSON object from LLM response text."""
+        text = text.strip()
+        text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text, flags=re.MULTILINE).strip()
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            match = re.search(r"\{[\s\S]*\}", text)
+            if match:
+                return json.loads(match.group())
+            raise
 
     @classmethod
     def _fallback_extract(cls, resume_text: str) -> Resume:

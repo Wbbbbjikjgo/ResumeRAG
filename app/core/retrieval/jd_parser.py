@@ -1,5 +1,6 @@
 """JD (Job Description) parser for structured query generation."""
 
+import json
 import re
 
 from langchain_core.prompts import ChatPromptTemplate
@@ -44,9 +45,8 @@ class JDParser:
         
         try:
             llm = LLMFactory.get_llm()
-            structured_llm = llm.with_structured_output(JDQuery)
-            
-            result = await structured_llm.ainvoke([
+
+            result = await llm.ainvoke([
                 ("system", """你是一个专业的岗位需求解析助手。请从以下岗位描述（JD）中提取结构化信息。
 
 要求：
@@ -55,16 +55,36 @@ class JDParser:
 3. min_years: 最低工作年限要求（数字，无要求则为 null）
 4. min_degree: 最低学历要求（大专/本科/硕士/博士，无要求则为 null）
 5. keywords: 扩展查询词（同义词、近义词、相关术语）
-6. intent_summary: 100字以内的岗位需求摘要"""),
+6. intent_summary: 100字以内的岗位需求摘要
+
+输出格式：严格 JSON 对象，键为上述字段，不要包含其他文字或 markdown 标记。"""),
                 ("human", f"请解析以下岗位描述：\n\n{jd_text[:5000]}")
-            ])
-            
-            logger.info(f"JD parsed: {len(result.must_skills)} must skills, {len(result.nice_skills)} nice skills")
-            return result
-            
+            ], response_format={"type": "json_object"})
+
+            response_text = result.content if hasattr(result, "content") else str(result)
+            parsed = cls._extract_json(response_text)
+            jd_query = JDQuery(**parsed)
+
+            logger.info(f"JD parsed: {len(jd_query.must_skills)} must skills, {len(jd_query.nice_skills)} nice skills")
+            return jd_query
+
         except Exception as e:
             logger.error(f"LLM JD parsing failed: {e}, falling back to regex")
             return cls._fallback_parse(jd_text)
+
+    @staticmethod
+    def _extract_json(text: str) -> dict:
+        """Extract a JSON object from LLM response text."""
+        text = text.strip()
+        # 去掉可能的 markdown 代码块标记
+        text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text, flags=re.MULTILINE).strip()
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            match = re.search(r"\{[\s\S]*\}", text)
+            if match:
+                return json.loads(match.group())
+            raise
 
     @classmethod
     def _fallback_parse(cls, jd_text: str) -> JDQuery:

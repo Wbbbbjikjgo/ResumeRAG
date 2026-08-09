@@ -5,8 +5,6 @@ from pymilvus import (
     CollectionSchema,
     FieldSchema,
     DataType,
-    connections,
-    utility,
 )
 from loguru import logger
 
@@ -33,12 +31,9 @@ class MilvusClientWrapper:
     async def health_check(cls) -> bool:
         """Check Milvus connection health."""
         try:
-            connections.connect(
-                alias="default",
-                host=get_settings().milvus.host,
-                port=get_settings().milvus.port
-            )
-            return utility.has_collection(get_settings().milvus.collection)
+            client = cls.get_client()
+            client.list_collections()
+            return True
         except Exception as e:
             logger.error(f"Milvus health check failed: {e}")
             return False
