@@ -9,9 +9,15 @@
 """
 
 import asyncio
+import os
 import sys
 import traceback
 from datetime import datetime
+
+# 确保项目根目录在 sys.path 中
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
 
 RESULTS: list[tuple[str, bool, str]] = []
 
@@ -153,10 +159,38 @@ async def test_llm() -> bool:
     return bool(hyde_doc)
 
 
+async def cleanup_stores() -> None:
+    """清理三库旧数据，保证可重复执行。"""
+    from app.core.config import get_settings
+    from app.core.infra.mongo_client import MongoDBClient
+    from app.core.infra.es_client import ElasticsearchClient
+    from app.core.infra.milvus_client import MilvusClientWrapper
+
+    settings = get_settings()
+    try:
+        await MongoDBClient.get_client().drop_database(settings.mongodb.database)
+    except Exception as e:
+        print(f"[WARN] MongoDB 清理失败: {e}")
+    try:
+        es = ElasticsearchClient.get_client()
+        if await es.indices.exists(index=settings.elasticsearch.index):
+            await es.indices.delete(index=settings.elasticsearch.index)
+    except Exception as e:
+        print(f"[WARN] ES 清理失败: {e}")
+    try:
+        client = MilvusClientWrapper.get_client()
+        if client.has_collection(settings.milvus.collection):
+            client.drop_collection(settings.milvus.collection)
+    except Exception as e:
+        print(f"[WARN] Milvus 清理失败: {e}")
+    print("[INFO] 旧数据清理完成")
+
+
 async def test_ingest() -> bool:
     """简历解析 + 三库入库。"""
     from app.core.parsing.pipeline import ParsingPipeline
 
+    await cleanup_stores()
     ok_all = True
     for filename, content in SAMPLE_RESUMES:
         result = await ParsingPipeline.ingest_resume(content.encode("utf-8"), filename, "text/plain")
