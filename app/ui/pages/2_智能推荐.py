@@ -1,177 +1,132 @@
-"""智能推荐页面 - JD 输入与候选人推荐"""
+"""智能推荐：JD 输入 → 混合检索 → 候选人排序 → 推荐理由。"""
 
 import streamlit as st
-import asyncio
 
-st.set_page_config(page_title="智能推荐 - ResumeRAG", page_icon="🔍", layout="wide")
+from common import highest_degree, run_async
 
-st.title("🔍 智能推荐")
-st.markdown("输入岗位描述（JD），系统自动推荐最匹配的候选人")
+st.title("智能推荐")
+st.caption("粘贴岗位描述（JD），系统解析需求后执行双路召回 + RRF 融合 + 精排，返回最匹配候选人")
 
-# Initialize session state
-if "recommendation_results" not in st.session_state:
-    st.session_state.recommendation_results = None
-if "jd_query" not in st.session_state:
-    st.session_state.jd_query = None
+DEFAULT_JD = """招聘岗位：资深 Java 后端开发工程师
 
-# JD input section
-st.header("岗位描述")
+岗位职责：
+1. 负责公司核心业务系统的后端设计与开发
+2. 参与高并发、高可用微服务架构设计与优化
 
-jd_text = st.text_area(
-    "请输入岗位描述（JD）",
-    height=200,
-    placeholder="""例如：
-我们正在寻找一位资深 Python 后端工程师，要求：
-- 5年以上 Python 开发经验
-- 熟悉 FastAPI、Django 等 Web 框架
-- 有微服务架构经验
-- 熟悉 Docker、Kubernetes
-- 有大规模系统开发经验优先
-- 本科及以上学历""",
-    help="粘贴完整的岗位描述，系统会自动解析核心要求"
-)
+任职要求：
+1. 本科及以上学历，计算机相关专业
+2. 5年以上 Java 开发经验
+3. 精通 Java、Spring Boot、Spring Cloud，熟悉微服务架构
+4. 熟练使用 MySQL、Redis，具备分库分表与缓存设计经验
+5. 熟悉 Docker、Kubernetes 容器化部署者优先
+6. 有 Kafka 等消息中间件使用经验者优先
+"""
 
-# Configuration options
-col1, col2, col3 = st.columns(3)
-with col1:
-    top_k = st.slider("推荐人数", 5, 20, 10, help="返回前 K 个最匹配的候选人")
-with col2:
-    use_hyde = st.checkbox("启用 HyDE", value=True, help="使用假设文档增强检索")
-with col3:
-    use_rerank = st.checkbox("启用精排", value=True, help="使用 Cross-Encoder 精排")
+# ---------- JD 输入 ----------
+with st.form("jd_form"):
+    jd_text = st.text_area("岗位描述（JD）", value=DEFAULT_JD, height=220, label_visibility="collapsed")
+    c1, c2, c3, c4 = st.columns([1, 1, 1, 2])
+    top_k = c1.number_input("推荐人数", 1, 20, 5)
+    use_hyde = c2.toggle("HyDE 增强", value=True, help="先生成假设候选人文档再做语义检索")
+    use_rerank = c3.toggle("精排", value=True, help="Cross-Encoder 不可用时自动降级为 LLM 精排")
+    submitted = c4.form_submit_button("开始推荐", type="primary", icon=":material/search:")
 
-# Search button
-if st.button("🚀 开始推荐", type="primary", disabled=not jd_text):
-    with st.spinner("正在解析岗位需求..."):
-        # TODO: Call actual retrieval pipeline
-        # from app.core.retrieval.hybrid_pipeline import HybridRetrievalPipeline
-        # jd_query, results = await HybridRetrievalPipeline.retrieve(
-        #     jd_text=jd_text,
-        #     top_k=top_k,
-        #     use_hyde=use_hyde,
-        #     use_rerank=use_rerank
-        # )
-        
-        # Mock results for now
-        st.session_state.jd_query = {
-            "must_skills": ["Python", "FastAPI", "Docker"],
-            "nice_skills": ["Kubernetes", "微服务"],
-            "min_years": 5,
-            "min_degree": "本科",
-            "intent_summary": "寻找资深 Python 后端工程师"
-        }
-        
-        st.session_state.recommendation_results = [
-            {
-                "resume_id": f"resume_{i}",
-                "name": f"候选人_{i+1}",
-                "match_score": 95 - i * 5,
-                "skills": ["Python", "FastAPI", "Docker", "Kubernetes"][:4-i%2],
-                "years": 6 - i * 0.5,
-                "degree": "本科" if i % 2 == 0 else "硕士",
-                "match_items": ["核心技能匹配", "经验年限符合"],
-                "improvement_items": ["可加强微服务经验"] if i > 2 else [],
-                "summary": f"匹配度 {95 - i * 5}分，技能与经验均符合要求。"
-            }
-            for i in range(top_k)
-        ]
-        
-        st.success(f"✅ 找到 {len(st.session_state.recommendation_results)} 位匹配候选人")
+# ---------- 执行检索 ----------
+if submitted and jd_text.strip():
+    from app.core.retrieval.hybrid_pipeline import HybridRetrievalPipeline
 
-# Display results
-if st.session_state.recommendation_results:
-    st.divider()
-    st.header("推荐结果")
-    
-    # Show JD analysis
-    if st.session_state.jd_query:
-        with st.expander("📋 岗位需求解析", expanded=True):
-            jd = st.session_state.jd_query
-            col1, col2 = st.columns(2)
-            with col1:
-                st.markdown(f"**核心技能**: {', '.join(jd['must_skills'])}")
-                st.markdown(f"**经验要求**: {jd['min_years']}年以上")
-            with col2:
-                st.markdown(f"**加分技能**: {', '.join(jd['nice_skills'])}")
-                st.markdown(f"**学历要求**: {jd['min_degree']}及以上")
-    
-    # Display candidate cards
-    for i, result in enumerate(st.session_state.recommendation_results):
-        with st.expander(
-            f"#{i+1} {result['name']} - 匹配度 {result['match_score']}分",
-            expanded=(i < 3)  # Expand top 3 by default
-        ):
-            col1, col2, col3 = st.columns([2, 2, 1])
-            
-            with col1:
-                st.metric("匹配度", f"{result['match_score']}分")
-                st.metric("经验年限", f"{result['years']}年")
-                st.metric("学历", result['degree'])
-            
-            with col2:
-                st.markdown("**核心技能**")
-                st.markdown(", ".join(result['skills']))
-                
-                if result.get('match_items'):
-                    st.markdown("**✅ 匹配项**")
-                    for item in result['match_items']:
-                        st.markdown(f"- {item}")
-                
-                if result.get('improvement_items'):
-                    st.markdown("**⚠️ 待提高**")
-                    for item in result['improvement_items']:
-                        st.markdown(f"- {item}")
-            
-            with col3:
-                st.markdown("**综合评价**")
-                st.info(result['summary'])
-    
-    # Comparison section
-    st.divider()
-    st.header("候选人对比")
-    
-    selected_candidates = st.multiselect(
-        "选择要对比的候选人（2-4人）",
-        options=[f"{r['name']} ({r['match_score']}分)" for r in st.session_state.recommendation_results],
-        default=[f"{r['name']} ({r['match_score']}分)" for r in st.session_state.recommendation_results[:3]],
-        max_selections=4
-    )
-    
-    if len(selected_candidates) >= 2:
-        # TODO: Generate radar chart
-        st.info("📊 雷达图对比功能开发中...")
-        
-        # Simple comparison table
-        comparison_data = []
-        for name in selected_candidates:
-            for r in st.session_state.recommendation_results:
-                if f"{r['name']} ({r['match_score']}分)" == name:
-                    comparison_data.append({
-                        "候选人": r['name'],
-                        "匹配度": r['match_score'],
-                        "经验": f"{r['years']}年",
-                        "学历": r['degree'],
-                        "技能": ", ".join(r['skills'][:3])
-                    })
-        
-        st.dataframe(comparison_data, use_container_width=True)
+    with st.status("正在执行混合检索…", expanded=True) as status:
+        st.write("1/4 解析岗位需求")
+        jd_query, results = run_async(
+            HybridRetrievalPipeline.retrieve(
+                jd_text=jd_text, top_k=int(top_k), use_hyde=use_hyde, use_rerank=use_rerank
+            )
+        )
+        st.write("2/4 双路召回 + RRF 融合完成")
+        status.update(label=f"检索完成，找到 {len(results)} 位候选人", state="complete")
 
-# Sidebar info
+    st.session_state["jd_query"] = jd_query
+    st.session_state["results"] = results
+    st.session_state["explanations"] = {}
+
+# ---------- 展示结果 ----------
+jd_query = st.session_state.get("jd_query")
+results = st.session_state.get("results") or []
+
+if jd_query is not None:
+    with st.container(border=True):
+        st.markdown(":material/description: **岗位需求解析**")
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("**必备技能**")
+            st.markdown(" ".join(f":blue-badge[{s}]" for s in jd_query.must_skills) or "-")
+        with c2:
+            st.markdown("**加分技能**")
+            st.markdown(" ".join(f":gray-badge[{s}]" for s in jd_query.nice_skills) or "-")
+        req = []
+        if jd_query.min_years:
+            req.append(f"经验 ≥ {jd_query.min_years:g} 年")
+        if jd_query.min_degree:
+            req.append(f"学历 ≥ {jd_query.min_degree}")
+        if req:
+            st.caption(" · ".join(req))
+
+if results:
+    st.header("推荐结果", divider=True)
+
+    from app.core.infra.mongo_client import MongoDBClient
+
+    # 批量取候选人信息
+    async def _fetch(ids: list[str]) -> dict:
+        cursor = MongoDBClient.get_collection().find({"resume_id": {"$in": ids}}, {"full_text": 0})
+        return {d["resume_id"]: d async for d in cursor}
+
+    resume_map = run_async(_fetch([r.resume_id for r in results]))
+
+    for rank, r in enumerate(results, 1):
+        doc = resume_map.get(r.resume_id, {})
+        name = doc.get("name") or r.resume_id[:8]
+        degree = highest_degree(doc.get("education"))
+        years = doc.get("years_of_experience")
+
+        with st.container(border=True):
+            head_l, head_r = st.columns([4, 1])
+            with head_l:
+                st.markdown(f"**#{rank} {name}** · {degree} · {f'{years:g} 年经验' if years else '经验未知'}")
+                skills = doc.get("skills") or []
+                if skills:
+                    st.markdown(" ".join(f":gray-badge[{s}]" for s in skills[:10]))
+            with head_r:
+                st.metric("匹配分", f"{r.score:.3f}", help="RRF 融合得分（越大越好）")
+
+            if doc.get("summary"):
+                st.caption(doc["summary"])
+
+            if st.button("生成推荐理由", key=f"explain_{r.resume_id}", icon=":material/lightbulb:"):
+                from app.core.generation.explainer import Explainer
+                from app.core.models import Resume
+
+                resume_obj = Resume(
+                    **{k: doc.get(k) for k in Resume.model_fields if k in doc}
+                )
+                with st.spinner("LLM 正在分析匹配度…"):
+                    explanation = run_async(Explainer.explain(jd_query, resume_obj, r.score))
+                st.session_state["explanations"][r.resume_id] = explanation
+
+            if r.resume_id in st.session_state.get("explanations", {}):
+                exp = st.session_state["explanations"][r.resume_id]
+                with st.container(border=False):
+                    st.markdown("**匹配点**")
+                    for item in exp.get("match_items", []):
+                        st.markdown(f"- :green[✓] {item}")
+                    for item in exp.get("improvement_items", []):
+                        st.markdown(f"- :orange[△] {item}")
+                    if exp.get("summary"):
+                        st.info(exp["summary"], icon=":material/summarize:")
+else:
+    if jd_query is not None:
+        st.warning("未检索到匹配候选人，请检查简历库是否已入库数据。", icon=":material/search_off:")
+
 with st.sidebar:
-    st.header("推荐说明")
-    st.markdown("""
-    ### 推荐流程
-    1. **JD 解析** → 提取核心技能、经验要求
-    2. **双路召回** → Milvus 语义 + ES 关键词
-    3. **RRF 融合** → 合并两路结果
-    4. **精排** → Cross-Encoder 精细打分
-    5. **生成理由** → LLM 生成匹配分析
-    
-    ### 配置说明
-    - **推荐人数**: 返回前 K 个候选人
-    - **HyDE**: 生成假设文档提升召回
-    - **精排**: 使用 Reranker 精细排序
-    """)
-    
-    st.divider()
-    st.caption("提示：推荐结果可导出或进一步追问筛选")
+    st.markdown(":material/route: **推荐流程**")
+    st.caption("JD 解析 → HyDE 假设文档 → Milvus 语义召回 + ES 关键词召回 → RRF 融合 → 精排 → LLM 推荐理由")
