@@ -48,7 +48,7 @@ class ResumeExtractor:
         
         try:
             # Use LLM with JSON output (DeepSeek 不支持 json_schema 结构化输出)
-            llm = LLMFactory.get_llm()
+            llm = LLMFactory.get_llm(streaming=False)
 
             result = await llm.ainvoke([
                 ("system", """你是一个专业的简历解析助手。请从以下简历文本中提取结构化信息。

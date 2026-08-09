@@ -138,7 +138,7 @@ class Reranker:
             
             candidates_str = "\n\n".join(candidates_text)
             
-            llm = LLMFactory.get_llm()
+            llm = LLMFactory.get_llm(streaming=False)
             response = await llm.ainvoke([
                 ("system", rerank_prompt.format(query=query[:500], candidates=candidates_str)),
                 ("human", "请排序以上候选人。")

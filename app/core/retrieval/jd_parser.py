@@ -44,7 +44,7 @@ class JDParser:
             return cls._fallback_parse(jd_text)
         
         try:
-            llm = LLMFactory.get_llm()
+            llm = LLMFactory.get_llm(streaming=False)
 
             result = await llm.ainvoke([
                 ("system", """你是一个专业的岗位需求解析助手。请从以下岗位描述（JD）中提取结构化信息。
@@ -192,8 +192,8 @@ class JDParser:
 请生成一份符合该岗位要求的候选人简历摘要，突出相关经验和技能。"""
 
         try:
-            llm = LLMFactory.get_llm()
-            
+            llm = LLMFactory.get_llm(streaming=False)
+
             result = await llm.ainvoke([
                 ("system", "你是一个专业的简历撰写助手。请根据岗位需求生成一份理想候选人的简历摘要。"),
                 ("human", prompt.format(

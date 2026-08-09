@@ -84,17 +84,17 @@ class ESRetriever:
         
         # Must: hard skills (required)
         if jd_query.must_skills:
-            must_clauses.append({
-                "terms": {
-                    "skills": jd_query.must_skills
-                }
-            })
-            
-            # Also search in full_text for skills mentioned but not in skills field
+            # keyword 精确匹配（大小写不敏感）
             must_clauses.append({
                 "bool": {
                     "should": [
-                        {"match": {"full_text": skill}} for skill in jd_query.must_skills
+                        {"terms": {"skills": jd_query.must_skills}},
+                        {"multi_match": {
+                            "query": " ".join(jd_query.must_skills),
+                            "fields": ["full_text", "skills^2"],
+                            "type": "best_fields",
+                            "minimum_should_match": "20%"
+                        }}
                     ],
                     "minimum_should_match": 1
                 }
@@ -117,22 +117,22 @@ class ESRetriever:
                     "match": {"full_text": {"query": keyword, "boost": 0.5}}
                 })
         
-        # Filter: minimum years of experience
+        # Should: 年限/学历作为加分项而非硬过滤（避免解析误差导致漏召回）
         if jd_query.min_years is not None:
-            filter_clauses.append({
+            should_clauses.append({
                 "range": {
-                    "years_of_experience": {"gte": int(jd_query.min_years)}
+                    "years_of_experience": {"gte": int(jd_query.min_years), "boost": 1.5}
                 }
             })
-        
-        # Filter: minimum degree
+
+        # Should: minimum degree (boost)
         if jd_query.min_degree:
             degree_hierarchy = ["大专", "本科", "硕士", "博士"]
             try:
                 min_idx = degree_hierarchy.index(jd_query.min_degree)
                 allowed_degrees = degree_hierarchy[min_idx:]
-                filter_clauses.append({
-                    "terms": {"degree": allowed_degrees}
+                should_clauses.append({
+                    "terms": {"degree": allowed_degrees, "boost": 1.2}
                 })
             except ValueError:
                 pass
