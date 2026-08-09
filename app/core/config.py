@@ -5,9 +5,14 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from dotenv import load_dotenv
 from loguru import logger
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings
+
+# 加载项目根目录下的 .env（供 DEEPSEEK_API_KEY 等环境变量使用）
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+load_dotenv(_PROJECT_ROOT / ".env")
 
 
 class MongoDBConfig(BaseModel):

@@ -96,7 +96,7 @@ class RetrievalResult(BaseModel):
     """Single retrieval result."""
     resume_id: str
     score: float
-    source: Literal["milvus", "elasticsearch", "fusion"]
+    source: Literal["milvus", "elasticsearch", "fusion", "reranked"]
     matched_sections: list[str] = Field(default_factory=list)
 
 

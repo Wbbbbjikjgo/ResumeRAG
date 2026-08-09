@@ -30,12 +30,12 @@ elasticsearch:
   analyzer: ${ES_ANALYZER:standard}          # 本地镜像未装 ik 插件，可切换 ik_max_word
   search_analyzer: ${ES_SEARCH_ANALYZER:standard}
 
-# LLM Configuration
+# LLM Configuration (DeepSeek, OpenAI 兼容接口)
 llm:
-  provider: ${LLM_PROVIDER:openai}  # openai / azure / local
-  model: ${LLM_MODEL:gpt-4}
-  api_key: ${OPENAI_API_KEY:}
-  api_base: ${OPENAI_API_BASE:https://api.openai.com/v1}
+  provider: ${LLM_PROVIDER:deepseek}  # deepseek / openai / azure / local
+  model: ${LLM_MODEL:deepseek-chat}
+  api_key: ${DEEPSEEK_API_KEY:}
+  api_base: ${LLM_API_BASE:https://api.deepseek.com/v1}
   temperature: 0.3
   max_tokens: 2000
   streaming: true
