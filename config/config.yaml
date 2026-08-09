@@ -27,8 +27,8 @@ elasticsearch:
   index: resumes
   username: ${ES_USERNAME:}
   password: ${ES_PASSWORD:}
-  analyzer: ik_max_word
-  search_analyzer: ik_smart
+  analyzer: ${ES_ANALYZER:standard}          # 本地镜像未装 ik 插件，可切换 ik_max_word
+  search_analyzer: ${ES_SEARCH_ANALYZER:standard}
 
 # LLM Configuration
 llm:
