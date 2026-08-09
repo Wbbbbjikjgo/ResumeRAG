@@ -56,7 +56,7 @@ class MilvusRetriever:
                 limit=top_n,
                 output_fields=["resume_id", "doc_type", "section_name", "text"],
                 search_params=search_params,
-                expr=expr if expr else None
+                filter=expr if expr else ""
             )
             
             # Process results
@@ -150,7 +150,7 @@ class MilvusRetriever:
                 limit=top_n,
                 output_fields=["resume_id", "doc_type", "section_name", "text"],
                 search_params=search_params,
-                expr=expr if expr else None
+                filter=expr if expr else ""
             )
             
             # Process results

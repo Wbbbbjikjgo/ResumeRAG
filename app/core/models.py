@@ -20,7 +20,7 @@ class ExperienceItem(BaseModel):
     company: str
     title: str
     start: str
-    end: str
+    end: str | None = None  # 在职时为 null
     description: str
 
 

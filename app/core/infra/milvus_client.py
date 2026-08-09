@@ -2,8 +2,6 @@
 
 from pymilvus import (
     MilvusClient,
-    CollectionSchema,
-    FieldSchema,
     DataType,
 )
 from loguru import logger
@@ -47,11 +45,12 @@ class MilvusClientWrapper:
 
         # Check if collection exists
         if client.has_collection(col_name):
+            client.load_collection(col_name)
             logger.info(f"Collection {col_name} already exists")
             return
 
-        # Create schema
-        schema = CollectionSchema()
+        # Create schema (pymilvus 2.5 推荐通过 client.create_schema())
+        schema = client.create_schema()
         schema.add_field(field_name="pk", datatype=DataType.INT64, is_primary=True, auto_id=True)
         schema.add_field(field_name="resume_id", datatype=DataType.VARCHAR, max_length=64)
         schema.add_field(field_name="embedding", datatype=DataType.FLOAT_VECTOR, dim=settings.milvus.dimension)
@@ -77,7 +76,8 @@ class MilvusClientWrapper:
             }
         )
         client.create_index(col_name, index_params)
-        logger.info(f"Collection {col_name} created with HNSW index")
+        client.load_collection(col_name)
+        logger.info(f"Collection {col_name} created with HNSW index and loaded")
 
     @classmethod
     def close(cls):
