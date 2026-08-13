@@ -53,19 +53,19 @@ class ResumeExtractor:
             result = await llm.ainvoke([
                 ("system", """你是一个专业的简历解析助手。请从以下简历文本中提取结构化信息。
 
-要求：
-1. 如果某个字段在文本中找不到，使用 null 或空列表
-2. 教育经历按时间倒序排列，degree 只能是：大专/本科/硕士/博士/其他
-3. 工作经历按时间倒序排列
-4. 技能列表去重并规范化
-5. years_of_experience 根据工作经历估算（数字），无法估算则为 null
-6. summary 生成一段 100 字以内的简历摘要
+            要求：
+            1. 如果某个字段在文本中找不到，使用 null 或空列表
+            2. 教育经历按时间倒序排列，degree 只能是：大专/本科/硕士/博士/其他
+            3. 工作经历按时间倒序排列
+            4. 技能列表去重并规范化
+            5. years_of_experience 根据工作经历估算（数字），无法估算则为 null
+            6. summary 生成一段 100 字以内的简历摘要
 
-输出格式：严格 JSON 对象，结构如下，不要包含其他文字或 markdown 标记：
-{"name": str|null, "phone": str|null, "email": str|null,
- "education": [{"school": str, "major": str, "degree": str, "start": str, "end": str}],
- "experience": [{"company": str, "title": str, "start": str, "end": str, "description": str}],
- "skills": [str], "years_of_experience": number|null, "summary": str}"""),
+            输出格式：严格 JSON 对象，结构如下，不要包含其他文字或 markdown 标记：
+            {"name": str|null, "phone": str|null, "email": str|null,
+            "education": [{"school": str, "major": str, "degree": str, "start": str, "end": str}],
+            "experience": [{"company": str, "title": str, "start": str, "end": str, "description": str}],
+            "skills": [str], "years_of_experience": number|null, "summary": str}"""),
                 ("human", f"请解析以下简历：\n\n{resume_text[:10000]}")  # Limit to 10k chars
             ], response_format={"type": "json_object"})
 

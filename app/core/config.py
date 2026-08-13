@@ -137,6 +137,7 @@ class Settings(BaseSettings):
 
         # Process environment variable substitutions
         processed_config = cls._process_env_vars(raw_config)
+        #cls(**processed_config) 的意思是：把字典 processed_config 的键值对作为关键字参数，传递给 cls 的构造函数来创建实例。
         return cls(**processed_config)
 
     @staticmethod

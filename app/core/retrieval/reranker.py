@@ -119,16 +119,16 @@ class Reranker:
             rerank_prompt = ChatPromptTemplate.from_messages([
                 ("system", """你是一个专业的简历评估专家。请根据岗位需求对候选人简历进行排序。
 
-岗位需求：{query}
+                岗位需求：{query}
 
-请对以下候选人按匹配度从高到低排序，返回 resume_id 列表（用逗号分隔）。
+                请对以下候选人按匹配度从高到低排序，返回 resume_id 列表（用逗号分隔）。
 
-候选人列表：
-{candidates}
+                候选人列表：
+                {candidates}
 
-只返回 resume_id 列表，不要其他文字。"""),
-                ("human", "请排序以上候选人。")
-            ])
+                只返回 resume_id 列表，不要其他文字。"""),
+                                ("human", "请排序以上候选人。")
+                            ])
             
             # Build candidates text
             candidates_text = []
