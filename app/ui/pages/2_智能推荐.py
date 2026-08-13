@@ -2,7 +2,9 @@
 
 import streamlit as st
 
-from common import highest_degree, run_async
+from common import highest_degree, run_async, inject_css
+
+inject_css()
 
 st.title("智能推荐")
 st.caption("粘贴岗位描述（JD），系统解析需求后执行双路召回 + RRF 融合 + 精排，返回最匹配候选人")

@@ -2,7 +2,9 @@
 
 import streamlit as st
 
-from common import get_resumes, get_stats, highest_degree, refresh_data, run_async
+from common import get_resumes, get_stats, highest_degree, refresh_data, run_async, inject_css
+
+inject_css()
 
 st.title("简历管理")
 st.caption("上传简历自动解析入库（MongoDB 全文 + Milvus 向量 + Elasticsearch 索引），并浏览简历库")

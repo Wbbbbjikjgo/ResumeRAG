@@ -1,9 +1,43 @@
 [theme]
-base = "light"
-primaryColor = "#2563EB"
-backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F6F8FA"
-textColor = "#1F2328"
+base = "dark"
+primaryColor = "#0ea5e9"
+backgroundColor = "#0b1220"
+secondaryBackgroundColor = "#131d30"
+textColor = "#e6edf7"
+linkColor = "#38bdf8"
+codeTextColor = "#e6edf7"
+codeBackgroundColor = "#0f172a"
+borderColor = "#1e2c40"
+
+baseRadius = "10px"
+buttonRadius = "8px"
+showWidgetBorder = true
+showSidebarBorder = true
+linkUnderline = false
+
+baseFontSize = 15
+baseFontWeight = 400
+
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+headingFont = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800&display=swap"
+codeFont = "'JetBrains Mono':https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap"
+
+redColor = "#f87171"
+orangeColor = "#fb923c"
+yellowColor = "#fbbf24"
+greenColor = "#34d399"
+blueColor = "#38bdf8"
+violetColor = "#a78bfa"
+grayColor = "#94a3b8"
+
+chartCategoricalColors = ["#38bdf8", "#34d399", "#a78bfa", "#f472b6", "#fbbf24", "#fb923c", "#94a3b8"]
+
+[theme.sidebar]
+backgroundColor = "#0f172a"
+secondaryBackgroundColor = "#131d30"
+textColor = "#cbd5e1"
+borderColor = "#1e2c40"
+primaryColor = "#38bdf8"
 
 [server]
 headless = true

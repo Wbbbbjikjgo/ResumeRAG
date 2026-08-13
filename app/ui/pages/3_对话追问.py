@@ -2,7 +2,9 @@
 
 import streamlit as st
 
-from common import run_async
+from common import run_async, inject_css
+
+inject_css()
 
 st.title("对话追问")
 st.caption("用自然语言筛选与对比候选人，助手会自动调用语义检索 / 关键词检索 / 条件筛选工具")

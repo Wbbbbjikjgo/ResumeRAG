@@ -23,6 +23,39 @@ def run_async(coro: Coroutine) -> Any:
     return _LOOP.run_until_complete(coro)
 
 
+def inject_css() -> None:
+    """注入全局科技感样式：顶部光晕、渐变标题、卡片发光。"""
+    st.markdown(
+        """
+        <style>
+        .stApp {
+            background:
+                radial-gradient(1200px 480px at 50% -120px, rgba(14, 165, 233, 0.16), transparent 60%),
+                radial-gradient(900px 420px at 92% 8%, rgba(52, 211, 153, 0.08), transparent 60%);
+        }
+        h1 {
+            background: linear-gradient(100deg, #7dd3fc 0%, #38bdf8 45%, #34d399 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800 !important;
+            letter-spacing: -0.5px;
+        }
+        [data-testid="stVerticalBlockBorderWrapper"] {
+            transition: box-shadow 0.25s ease, border-color 0.25s ease;
+        }
+        [data-testid="stVerticalBlockBorderWrapper"]:hover {
+            box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.35), 0 12px 32px rgba(2, 6, 23, 0.45);
+        }
+        [data-testid="stMetricValue"] {
+            color: #38bdf8;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 @st.cache_data(ttl=30, show_spinner=False)
 def get_stats() -> dict:
     """读取三库统计数据（30 秒缓存）。"""

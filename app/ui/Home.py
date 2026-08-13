@@ -2,13 +2,15 @@
 
 import streamlit as st
 
-from common import get_stats
+from common import get_stats, inject_css
 
 st.set_page_config(
     page_title="ResumeRAG",
     page_icon=":material/search:",
     layout="wide",
 )
+
+inject_css()
 
 st.title("ResumeRAG")
 st.caption("基于 RAG 的智能简历推荐系统 · Milvus 语义检索 + Elasticsearch 关键词检索 + DeepSeek 大模型")
