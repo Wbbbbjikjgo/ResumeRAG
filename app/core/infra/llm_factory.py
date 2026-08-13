@@ -1,10 +1,28 @@
 """LLM, Embedding, and Reranker factory."""
 
+from pathlib import Path
+
 from langchain_openai import ChatOpenAI
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from loguru import logger
 
 from app.core.config import get_settings
+
+# 项目根目录，用于把相对路径的本地模型解析为绝对路径（避免依赖运行时 CWD）
+_PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
+
+def _resolve_model_name(model_name: str) -> str:
+    """本地模型相对路径解析为项目根目录下的绝对路径，其余（HF 模型 ID）原样返回。"""
+    if not model_name:
+        return model_name
+    p = Path(model_name)
+    if p.is_absolute():
+        return model_name
+    local = _PROJECT_ROOT / model_name
+    if local.exists():
+        return str(local.resolve())
+    return model_name
 
 
 class LLMFactory:
@@ -56,7 +74,7 @@ class LLMFactory:
         if cls._embedding_instance is None:
             settings = get_settings()
             cls._embedding_instance = HuggingFaceEmbeddings(
-                model_name=settings.embedding.model_name,
+                model_name=_resolve_model_name(settings.embedding.model_name),
                 model_kwargs={"device": settings.embedding.device},
                 encode_kwargs={"normalize_embeddings": True}
             )
@@ -75,7 +93,7 @@ class LLMFactory:
             try:
                 from FlagEmbedding import FlagReranker
                 cls._reranker_instance = FlagReranker(
-                    settings.reranker.model_name,
+                    _resolve_model_name(settings.reranker.model_name),
                     use_fp16=(settings.reranker.device == "cuda")
                 )
                 logger.info(f"Reranker initialized: {settings.reranker.model_name}")
